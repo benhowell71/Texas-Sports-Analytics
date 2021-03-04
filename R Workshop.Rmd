@@ -1,0 +1,87 @@
+---
+title: "TSA Workshop"
+author: "Ben Howell"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      fig.align = "center",
+                      #fig.width = 8, 
+                      message = FALSE)
+```
+
+```{r}
+#if you're starting from scratch, you can load these packages in with 'install.packages("PACKAGE")'
+
+#loading packages
+library(tidyverse)
+library(mgcv)
+library(kableExtra)
+library(nbastatR)
+
+shots <- read.csv("https://raw.githubusercontent.com/dblackrun/datasets/main/lebron_passes_to_3s/shots.csv")
+#shots <- read.csv("shots_data.csv")
+```
+
+```{r}
+head(shots)
+str(shots)
+
+in_x <- c(-75, -75, 75, 75)
+in_y <- c(-35, 150, 150, -35)
+
+inner <- data.frame(in_x, in_y)
+
+court <- function(...) {
+  ggplot(...) +
+  geom_segment(aes(x = -215, xend = -215, y = -35, yend = 100)) +
+  geom_segment(aes(x = 215, xend = 215, y = -35, yend = 100)) +
+  geom_curve(aes(x = -215, xend = 215,
+                 y = 100, yend = 100), curvature = -0.66) +
+  geom_path(data = inner, aes(x = in_x, y = in_y)) +
+  geom_curve(aes(x = -65, xend = 65,
+                 y = 150, yend = 150),
+             curvature = 1, linetype = "dashed") +
+  geom_curve(aes(x = -65, xend = 65,
+                 y = 150, yend = 150),
+             curvature = -1) +
+    theme_bw() +
+    theme(panel.grid.minor = element_blank())
+}
+
+new_shots <- shots %>%
+  mutate(pass_x = as.numeric(as.character(pass_from_x)),
+         pass_y = as.numeric(as.character(pass_from_y)))
+
+str(new_shots)
+
+new_shots %>%
+  court() +
+  geom_point(aes(x = pass_x, y = pass_y, color = made))
+
+new_shots %>%
+  court() +
+  geom_point(aes(x = x, y = y, color = made)) +
+  labs(color = "Re-name")
+```
+
+```{r}
+new_shots <- new_shots %>%
+  mutate(pct = ifelse(made == "True", 1, 0))
+
+new_shots %>%
+  court() +
+  stat_summary_hex(aes(x = x, y = y, z = pct), fun = mean, binwidth = c(20, 20)) +
+  scale_fill_gradient2(low = "blue", mid = "grey", midpoint = 0.45, high = "red") +
+  labs(x = "Baseline", y = "Sideline", title = "FG% by Zone",
+       subtitle = "3 PAs from LeBron passes",
+       caption = "By Ben Howell", fill = "FG%") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+```
+
